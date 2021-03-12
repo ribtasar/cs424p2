@@ -142,10 +142,22 @@ sidebar <-dashboardSidebar (disable = FALSE, collapsed = FALSE,
 
 body<-dashboardBody(
   
-  tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-  ),
+ # tags$head(
+  #  tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+  #),
   
+  tags$head(
+    tags$style(HTML("
+
+      .selectize-input {
+        height: 6px;
+        width: 150px;
+        font-size: 10pt;
+        padding-top: 2px;
+      }
+
+    "))),
+#  tags$head(includeCSS(path="www/custom.css")),
   
   tabItems( 
     #first tab is for Illinois dataset
@@ -167,6 +179,8 @@ body<-dashboardBody(
                                         selected = "All",
                                         inline = TRUE
                                         )),
+              
+              
               fluidRow(
                 column(width=10, offset=1,
                        # checkboxInput("allCheckbox", "All", value = TRUE, width = NULL),
@@ -198,9 +212,18 @@ body<-dashboardBody(
             #  h4("State Comparison"),
             fluidRow(class = "myRow1", 
                      column(width=6, offset=0, 
+                            fluidRow(
                             #    h4("Illinois"),
+                            tags$style("input[type=checkbox] {
+                    transform: scale(.8);
+           }"),
+                            
+                            tags$style("#map2source {
+                    font-size:12px;
+                    height:12px;
+           }"),
                             checkboxGroupInput("map2source", 
-                                               h3("Select Energy:"), 
+                                               h6("Select Energy:"), 
                                                choices = c("All" = "All",
                                                            "Coal" = "Coal", "Oil"="Oil","Geothermal" = "Geothermal", "Hydro" = "Hydro",
                                                            "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
@@ -210,8 +233,22 @@ body<-dashboardBody(
                                                selected = "All",
                                                inline = TRUE
                             )),
+                            
+                            ),
+                     
+                     
+                     
+                     
                      column(width=6, offset=0, 
                             #    h4("Illinois"),
+                                                tags$style("input[type=checkbox] {
+                                        transform: scale(.8);
+                               }"),
+                                                
+                                                tags$style("#map3source {
+                                        font-size:12px;
+                                        height:12px;
+                               }"),
                             checkboxGroupInput("map3source", 
                                                h6("Select Energy:"), 
                                                choices = c("All" = "All",
@@ -225,14 +262,18 @@ body<-dashboardBody(
                      
             ),
             # ),#end of myRow1
+            fluidRow(),
             fluidRow(class = "myRow2", 
                      column(6,
                             fluidRow(
                               column(4, 
+                                   
+                                       div(style = "height:58.5px"),
                                      selectInput('state1', 'State1', choiceState, selected = "IL")
                               ),
                               
                               column(4,
+                                     div(style = "height:58.5px"),
                                      selectInput("year1", "Year1", choiceYears, selected = 2000)
                               )
                             ),
@@ -256,10 +297,12 @@ body<-dashboardBody(
                      column(6,
                             fluidRow(
                               column(4, 
+                                     div(style = "height:58.5px"),
                                      selectInput('state2', 'State2', choiceState, selected = "IL")
                               ),
                               
                               column(4,
+                                     div(style = "height:58.5px"),
                                      selectInput("year2", "Year2", choiceYears, selected = 2018)
                               )
                             ),

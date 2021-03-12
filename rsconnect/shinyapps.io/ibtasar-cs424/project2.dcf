@@ -5,9 +5,8 @@ account: ibtasar-cs424
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3693633
-bundleId: 4333845
+bundleId: 4334485
 url: https://ibtasar-cs424.shinyapps.io/project2/
-when: 1615516377.02427
+when: 1615531101.45668
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: www/custom.css
