@@ -21,26 +21,36 @@ library(leaflet.extras)
 library(tidyverse)
 library(readxl)
 library(scales)
+library(rgdal)
+library(usdata)
 
 
 #set the correct wd
-#setwd('C:/Users/ribta/OneDrive/Desktop/UIC/Courses/Spring 2021/CS424/project2/')
-
+#setwd('C:/Users/ribta/OneDrive/Desktop/UIC/Courses/Spring 2021/CS424/project2/cs424p2')
+set.seed(122)
 #Cleaning up the data for ALL 3 files and making sure ALL have the same format
 #read the excel data into d
 d1 <- read_excel('plant_18.xlsx')
 d2 <- read_excel('plant_00.xlsx')
 d3 <- read_excel('plant_10.xlsx')
 
+#change the LON and LAT to numeric for d2
+d2$LON <- as.numeric(d2$LON)
+d2$LAT <- as.numeric(d2$LAT)
+
 #insert 0s in place of all NAs
 d1[is.na(d1)] <- 0
 d2[is.na(d2)] <- 0
 d3[is.na(d3)] <- 0
 
-#remove the plants that don't have any lat or lon location valaues since we can't plot them
+
+#remove the plants that don't have any lat or lon location values since we can't plot them
 d1<-subset(d1,d1$LAT!=0 & d1$LON!=0)
 d2<-subset(d2,d2$LAT!=0 & d2$LON!=0)
 d3<-subset(d3,d3$LAT!=0 & d3$LON!=0)
+
+#change all longitude values to negative
+d2$LON<- -d2$LON
 
 #create a TOTAL column by adding the plant total renewables and plant total non-renewables columns
 #d<-mutate(d,(TOTAL=PLGENATN+PLGENATR))
@@ -68,6 +78,8 @@ d3$PLGENAOF <- d3$PLGENAOF + d3$PLGENAOP
 d3$PLGENAOP<-NULL
 d3$YEAR<-2010
 
+
+
 #now ALL dataframes have 32 columns with the SAME colnames
 
 
@@ -76,6 +88,10 @@ useColors<-c("Coal"="#8DD3C7","Geothermal"="#FFFFB3","Hydro"="#BEBADA",
              "Natural Gas"="#FB8072","Nuclear"="#80B1D3","Oil"="#FDB462",
              "Solar"="#B3DE69","Biomass"="#FCCDE5","Wind"="#D9D9D9",
              "Wood"="#BC80BD")
+sources<-c("Coal","Oil","Gas","Nuclear","Other","Hydro","Solar","Wind","Biomass","Geothermal")
+#define the color palette
+pal=colorFactor(palette = topo.colors(10),levels = sources)
+
 
 #non-renewables colors
 coColor<-"#8DD3C7"
@@ -83,6 +99,7 @@ oilColor<-"#FDB462"
 gasColor<-"#FB8072"
 nuColor<-"#80B1D3"
 otColor<-"#FCCDE5"
+
 #renewables colors
 gtColor<-"#FFFFB3"
 soColor<-"#B3DE69"
@@ -144,8 +161,8 @@ body<-dashboardBody(
                                         choices = c("All" = "All",
                                                     "Coal" = "Coal", "Oil"="Oil","Geothermal" = "Geothermal", "Hydro" = "Hydro",
                                                     "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
-                                                    "Petroleum" = "Petroleum", "Solar" = "Solar", "Wind" = "Wind", 
-                                                    "Wood" = "Wood","Other"="Other","Renewables"="Renewables",
+                                                    "Oil" = "Oil", "Solar" = "Solar", "Wind" = "Wind", 
+                                                    "Biomass" = "Biomass","Other"="Other","Renewables"="Renewables",
                                                     "Non-Renewables"="Non-Renewables"),
                                         selected = "All",
                                         inline = TRUE
@@ -182,26 +199,26 @@ body<-dashboardBody(
             fluidRow(class = "myRow1", 
                      column(width=6, offset=0, 
                             #    h4("Illinois"),
-                            checkboxGroupInput("source2", 
-                                               h6("Select Energy:"), 
-                                               choices = c(
-                                                 #"All" = "All",
-                                                           "Coal" = "PLGENACL", "Geothermal" = "Geothermal", "Hydro" = "Hydro"),
-                                                          # "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
-                                                          # "Petroleum" = "Petroleum", "Solar" = "Solar", "Wind" = "Wind", 
-                                                           #"Wood" = "Wood","Other"="Other","Renewables"="Renewables",
-                                                           #"Non-Renewables"="Non-Renewables"),
-                                               selected = "Coal",
-                                               inline = TRUE)),
+                            checkboxGroupInput("map2source", 
+                                               h3("Select Energy:"), 
+                                               choices = c("All" = "All",
+                                                           "Coal" = "Coal", "Oil"="Oil","Geothermal" = "Geothermal", "Hydro" = "Hydro",
+                                                           "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
+                                                           "Oil" = "Oil", "Solar" = "Solar", "Wind" = "Wind", 
+                                                           "Biomass" = "Biomass","Other"="Other","Renewables"="Renewables",
+                                                           "Non-Renewables"="Non-Renewables"),
+                                               selected = "All",
+                                               inline = TRUE
+                            )),
                      column(width=6, offset=0, 
                             #    h4("Illinois"),
-                            checkboxGroupInput("source3", 
+                            checkboxGroupInput("map3source", 
                                                h6("Select Energy:"), 
                                                choices = c("All" = "All",
                                                            "Coal" = "Coal", "Geothermal" = "Geothermal", "Hydro" = "Hydro",
                                                            "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
-                                                           "Petroleum" = "Petroleum", "Solar" = "Solar", "Wind" = "Wind", 
-                                                           "Wood" = "Wood","Other"="Other","Renewables"="Renewables",
+                                                           "Oil" = "Oil", "Solar" = "Solar", "Wind" = "Wind", 
+                                                           "Biomass" = "Biomass","Other"="Other","Renewables"="Renewables",
                                                            "Non-Renewables"="Non-Renewables"),
                                                selected = "All",
                                                inline = TRUE))
@@ -216,7 +233,7 @@ body<-dashboardBody(
                               ),
                               
                               column(4,
-                                     selectInput("year1", "Year1", choiceYears, selected = 2018)
+                                     selectInput("year1", "Year1", choiceYears, selected = 2000)
                               )
                             ),
                             
@@ -243,7 +260,7 @@ body<-dashboardBody(
                               ),
                               
                               column(4,
-                                     selectInput("year2", "Year2", choiceYears, selected = 1990)
+                                     selectInput("year2", "Year2", choiceYears, selected = 2018)
                               )
                             ),
                             
@@ -267,9 +284,33 @@ body<-dashboardBody(
     
     #third tab for US
     tabItem(tabName = "us",
-            h2("US")
-            
-    ),#tabitem end
+            h4("United States Power Plants"),
+            #end of fluid row
+            fluidRow(
+              column(width=10, offset = 1,
+                     box(
+                       title = "Select generation amount range", status = "primary", width = 12,
+                       collapsible = TRUE,
+                       #small power plants will be under 1500KMWH and larger ones will be <1500KMWH
+                       sliderInput("range1","Select the Energy Generation Range(KWMh", min=0,max=16000, value=0),
+                       sliderInput("range2","Select the Energy Generation Range(KWMh", min=16000,max=32000, value=32000)
+                     )
+                     
+                     
+              )
+              
+              
+            ),
+            fluidRow(
+              column(width=10, offset=1,
+                     box(
+                       title = "US Energy Plants", status = "primary", width = 12,
+                       collapsible = TRUE,
+                       leafletOutput("mapUS",height=300)
+                     )
+              )
+            )
+    ),#tabitem 3 end
     
     tabItem(tabName = "about",
             h2("About")
@@ -300,8 +341,21 @@ server <- function(input, output) {
   #create reactive function to respond to user selection and subset data according to what is selected
   
   filter <-reactive({
+    
   markersBySources <-lapply(input$source2,function(sources)subset(illData,
                                                                   illData[sources]>0))
+  
+  #create reactive functions for TAB 2
+  
+  map2dataReactive<- reactive({
+    
+    
+    
+    
+  })
+  
+  
+  
  })
   
   opacity=0.5
@@ -343,11 +397,14 @@ server <- function(input, output) {
       addLayersControl(
         baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
         #overlayGroups = c("Quakes", "Outline"),
-        options = layersControlOptions(collapsed = TRUE)) 
+        options = layersControlOptions(collapsed = TRUE))
     
     
   })
-      
+    
+    
+    
+
   #Use leaflet Proxy to Addmarkers according to check box inputs
   #create an observe event to change markers according to checkboxes
   observeEvent(input$source1,
@@ -662,32 +719,76 @@ server <- function(input, output) {
   
   
   
-  #===============================================================
+  #=============================================================== 
   #TAB2 code
-  #comparison Map1
-  output$map2 <- renderLeaflet({
+  #===============================================================
+  #comparison Maps Render initial maps and then use leaflet proxy to addMarkers
+  #for optimization
+  #input$state1 & input$year1
+  # state.abb[input$state1] to get the abbreviations from the input values
+  tstate<-reactive({input$state1})
+  
+  #map1 reactive is dependent upon input$map2source & input$year1 &input$state1
+  map2dataset<- reactive({
+    #first filter dataset by Year
+    if(input$year1==2000)
+    {
+      tdata<-d2
+      tdata<-subset(tdata,tdata$PSTATABB==input$state1)
+    }
+    else if(input$year1==2010)
+    {
+      tdata<-d3
+      tdata<-subset(tdata,tdata$PSTATABB==input$state1)
+    }
+    else
+    {
+      tdata<-d1
+      tdata<-subset(tdata,tdata$PSTATABB==input$state1)
+      
+    }
+    #then subset dataset according to the State
+    #use function statetoabbr to convert to state abbreviations- may need state2abbr("Illinois")
     
-    leaflet(width = "50%") %>%
-      addTiles() %>%  # Add default OpenStreetMap map tiles
-      # addMarkers(lng=-87.623, lat=41.881, popup="The birthplace of R") %>%
-      setView(lng=-87.623, lat=41.881,zoom=5) %>%
-      addResetMapButton()%>%
-      addProviderTiles(providers$OpenTopoMap, group = "Toner") %>%
-      addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") %>%
-      # Layers control
-      addLayersControl(
-        baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
-        #overlayGroups = c("Quakes", "Outline"),
-        options = layersControlOptions(collapsed = FALSE))
-    
-    
+    #tdata<-subset(tdata,tdata$PSTATABB==(state2abbr(input$state1)))
+    tdata
   })
   
-  
-  #comparison Map2
-  output$map3 <- renderLeaflet({
+  #reactive for map3
+  map3dataset<- reactive({
+    #first filter dataset by Year
+    if(input$year2==2000)
+    {
+      tdata<-d2
+      tdata<-subset(tdata,tdata$PSTATABB==input$state2)
+      
+    }
+    else if(input$year2==2010)
+    {
+      tdata<-d3
+      tdata<-subset(tdata,tdata$PSTATABB==input$state2)
+    }
+    else
+    {
+      tdata<-d1
+      tdata<-subset(tdata,tdata$PSTATABB==input$state2)
+      
+    }
+    #then subset dataset according to the State
+    #use function statetoabbr to convert to state abbreviations- may need state2abbr("Illinois")
     
-    leaflet() %>%
+    #tdata<-subset(tdata,tdata$PSTATABB==(state2abbr(input$state1)))
+    tdata
+  })
+  
+  output$map2 <- renderLeaflet({
+    
+    #initially show plants for IL in 2000
+   
+    #t1<-subset(d3,d3$PSTATABB=="IL")
+    #tempdata<-map2reactive()
+    
+    leaflet(data=map2dataset(),width = "50%") %>%
       addTiles() %>%  # Add default OpenStreetMap map tiles
       # addMarkers(lng=-87.623, lat=41.881, popup="The birthplace of R") %>%
       setView(lng=-87.623, lat=41.881,zoom=5) %>%
@@ -697,9 +798,109 @@ server <- function(input, output) {
       # Layers control
       addLayersControl(
         baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
-        #overlayGroups = c("Quakes", "Outline"),
-        options = layersControlOptions(collapsed = FALSE))
+       # overlayGroups = c("sources"),
+        options = layersControlOptions(collapsed = TRUE)) %>%
+     # addLegend(position = "bottomright", pal=pal, values=sources, 
+      #          title = "Energy Sources") %>%
+      #addMarkers
+      addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
+                       # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
+                       radius =~sqrt(map2dataset()$PLNGENAN/100000),
+                       #layerId=paste(PLNGENAN), 
+                       popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
+                                     #"<br>Total Generation",PLNGENAN,
+                                     # "<br>Percent Renewable:",PLTRPR,
+                                     "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
+                       #stroke=FALSE,
+                       fillOpacity = 0.5,       
+                        clusterOptions=markerClusterOptions())%>%
+      clearBounds()
+     
+  })
+  
+  observe({
+    leafletProxy("map2", data=map2dataset()) %>%
+      clearShapes()%>%
+      #addMarkers
+      addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
+                       # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
+                       radius =~sqrt(map2dataset()$PLNGENAN/100000),
+                       #layerId=paste(PLNGENAN), 
+                       popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
+                                     #"<br>Total Generation",PLNGENAN,
+                                     # "<br>Percent Renewable:",PLTRPR,
+                                     "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
+                       #stroke=FALSE,
+                       fillOpacity = 0.5)       
+    # clusterOptions=markerClusterOptions()) 
+  }) #end of observe
+  
+  #comparison Map2
+  output$map3 <- renderLeaflet({
     
+    #the right should show the location of the plants in Illinois in 2018 (as in the part above) 
+    leaflet(data=map3dataset(),width = "50%") %>%
+      addTiles() %>%  # Add default OpenStreetMap map tiles
+      # addMarkers(lng=-87.623, lat=41.881, popup="The birthplace of R") %>%
+      setView(lng=-87.623, lat=41.881,zoom=5) %>%
+      addResetMapButton()%>%
+      addProviderTiles(providers$OpenTopoMap, group = "Topo") %>%
+      addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") %>%
+      # Layers control
+      addLayersControl(
+        baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
+        #overlayGroups = c("Renewables", "Non-renewables"),
+        options = layersControlOptions(collapsed = TRUE)) %>%
+      addLegend(position = "bottomright", pal=pal, values=sources,
+                title = "Energy Sources") %>%
+      #addMarkers
+      addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
+                       # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
+                       radius =~sqrt(map3dataset()$PLNGENAN/100000),
+                       #layerId=paste(PLNGENAN), 
+                       popup = paste("<b>","Plant Name:", map3dataset()$PNAME,
+                                     "<br>Total Generation",map3dataset()$PLNGENAN,
+                                    "<br>Percent Renewable:",map3dataset()$PLTRPR,
+                                     "<br>Percent Non-renewable:",map3dataset()$PLTNPR,"</b>"), 
+                       #stroke=FALSE,
+                       fillOpacity = 0.5,       
+                       clusterOptions=markerClusterOptions()) %>%
+    clearBounds()
+    
+  })
+  
+  output$mapUS <- renderLeaflet({
+    
+    
+    leaflet(data=map2dataset(),width = "50%") %>%
+      addTiles() %>%  # Add default OpenStreetMap map tiles
+      # addMarkers(lng=-87.623, lat=41.881, popup="The birthplace of R") %>%
+      setView(lng=-87.623, lat=41.881,zoom=5) %>%
+      addResetMapButton()%>%
+      addProviderTiles(providers$OpenTopoMap, group = "Topo") %>%
+      addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") %>%
+      # Layers control
+      addLayersControl(
+        baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
+        #overlayGroups = c("Renewables", "Non-renewables"),
+        options = layersControlOptions(collapsed = FALSE)) %>%
+      
+      setView(lng = mean(map2dataset()$LON), lat = mean(map2dataset()$LAT), zoom = 3) %>%
+      
+      addLegend(position = "bottomleft", pal=pal, values=sources,
+                title = "Energy Sources") %>%
+      #addMarkers
+      addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
+                       # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
+                       radius =~sqrt(map2dataset()$PLNGENAN/100000),
+                       #layerId=paste(PLNGENAN), 
+                       popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
+                                     #"<br>Total Generation",PLNGENAN,
+                                     # "<br>Percent Renewable:",PLTRPR,
+                                     "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
+                       #stroke=FALSE,
+                       fillOpacity = 0.5)       
+    # clusterOptions=markerClusterOptions())
     
   })
   

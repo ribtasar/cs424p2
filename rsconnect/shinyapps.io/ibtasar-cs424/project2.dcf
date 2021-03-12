@@ -5,9 +5,9 @@ account: ibtasar-cs424
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 3693633
-bundleId: 4314376
+bundleId: 4333845
 url: https://ibtasar-cs424.shinyapps.io/project2/
-when: 1615173840.70775
+when: 1615516377.02427
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: eGRID2000_plant.xls|eGRID2010_Data.xls|egrid2018_data_v2.xlsx|egrid2018_historical_files_since_1996.zip|plant_00_original.xls|plant_10_original.xlsx|plant_18_original.xlsx|www/custom.css
+ignoredFiles: www/custom.css
