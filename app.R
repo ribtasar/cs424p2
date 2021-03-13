@@ -23,7 +23,7 @@ library(readxl)
 library(scales)
 library(rgdal)
 library(usdata)
-
+library(sp)
 
 #set the correct wd
 #setwd('C:/Users/ribta/OneDrive/Desktop/UIC/Courses/Spring 2021/CS424/project2/cs424p2')
@@ -78,23 +78,35 @@ d3$PLGENAOF <- d3$PLGENAOF + d3$PLGENAOP
 d3$PLGENAOP<-NULL
 d3$YEAR<-2010
 
-
-
 #now ALL dataframes have 32 columns with the SAME colnames
 
+#make sure all columns are in the same order
+d1$YEAR<-NULL
+d1$SEQPLT18<-NULL
+d1$YEAR<-2018
+d2$SEQPLT00<-NULL
+d3$SEQPLT10<-NULL
+
+#create a dataset with 2018,2010 plants for use in TAB3
+allUS<-rbind(d1,d3)
 
 #Assigning colors to sources
 useColors<-c("Coal"="#8DD3C7","Geothermal"="#FFFFB3","Hydro"="#BEBADA",
              "Natural Gas"="#FB8072","Nuclear"="#80B1D3","Oil"="#FDB462",
              "Solar"="#B3DE69","Biomass"="#FCCDE5","Wind"="#D9D9D9",
              "Wood"="#BC80BD")
-sources<-c("Coal","Oil","Gas","Nuclear","Other","Hydro","Solar","Wind","Biomass","Geothermal")
-#define the color palette
-pal=colorFactor(palette = topo.colors(10),levels = sources)
 
+sources<-c("Coal","Oil","Gas","Nuclear","Other","Hydro","Solar","Wind","Biomass","Geothermal")
+renew<-c("Hydro","Solar","Wind","Biomass","Geothermal")
+nonrenew<-c("Coal","Oil","Gas","Nuclear","Other")
+
+#define the color palette
+#pal=colorFactor(palette = topo.colors(10),levels = sources)
+sourcepal= c("#FDB462","#FDB462","#FB8072","#80B1D3","#FCCDE5","#FFFFB3","#B3DE69","#BEBADA","#D9D9D9","#BC80BD")
+pal=colorFactor(palette = sourcepal,levels = sources)
 
 #non-renewables colors
-coColor<-"#8DD3C7"
+coColor<-"#FDB462"
 oilColor<-"#FDB462"
 gasColor<-"#FB8072"
 nuColor<-"#80B1D3"
@@ -107,12 +119,14 @@ hyColor<-"#BEBADA"
 wiColor<-"#D9D9D9"
 bmColor<-"#BC80BD"
 
+opacity=0.5
 
 #force no scientific notation for numbers
 options(scipen = 999)
 choiceState<-setNames(state.abb, state.name)[state.name]
 choiceYears<-c(2000,2010,2018)
 
+#Data for TAB ONE
 illData<-subset(d1,d1$PSTATABB=="IL")
 
 #Create a mapping between names and renderings
@@ -160,37 +174,34 @@ body<-dashboardBody(
 #  tags$head(includeCSS(path="www/custom.css")),
   
   tabItems( 
+    #==========================================================================================
     #first tab is for Illinois dataset
+    #==========================================================================================
+    
     tabItem(tabName = "ill",
             fluidRow(
               
-              column(width=10, offset=1, 
-                     h4("Illinois"),
-                     
-                     #if ALL gets selected than show all of the PLants
-                     checkboxGroupInput("source1", 
-                                        h3("Select Energy:"), 
-                                        choices = c("All" = "All",
-                                                    "Coal" = "Coal", "Oil"="Oil","Geothermal" = "Geothermal", "Hydro" = "Hydro",
-                                                    "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
-                                                    "Oil" = "Oil", "Solar" = "Solar", "Wind" = "Wind", 
-                                                    "Biomass" = "Biomass","Other"="Other","Renewables"="Renewables",
-                                                    "Non-Renewables"="Non-Renewables"),
-                                        selected = "All",
-                                        inline = TRUE
-                                        )),
+              column(width=10, offset=1,
+                     box(
+                       title = "Select Energy Sources", status = "primary", width = 12,
+                       collapsible = TRUE, collapsed = TRUE,
+                           h4("Illinois"),
+                           checkboxInput('allmapIL','Select All',value= TRUE),
+                           checkboxInput('allmapILR','Select Renewables',value= FALSE),
+                           checkboxInput('allmapILNR','Select Non-Renewables',value= FALSE),
+                           checkboxGroupInput("mapILsource", 
+                                              h6("Select Energy:"), 
+                                              choices = sources,
+                                              inline = TRUE,
+                                              #selected = sources
+                                               ),
+                     )
+                     ),
               
               
               fluidRow(
                 column(width=10, offset=1,
-                       # checkboxInput("allCheckbox", "All", value = TRUE, width = NULL),
-                       #checkboxInput("PLGENACL", "Coal", value = TRUE, width = NULL),
-                       #checkboxInput("PLGENAOL", "Oil", value = FALSE, width = NULL),
-                       #checkboxInput("PLGENAGS", "Gas", value = FALSE, width = NULL),
-                       
-                      # selectInput(inputId="mapRender",  #choose map style
-                       #            label="Map Rendering",
-                        #           choices=mapRenderingsList)
+                      
                 )
               ),
             ),
@@ -200,39 +211,43 @@ body<-dashboardBody(
                        title = "Illinois Energy Plants", status = "primary", width = 12,
                        collapsible = TRUE,
                        
-                       leafletOutput("map1",height=300)
+                       leafletOutput("map1",height=450)
                      )
               )
             )
             
     ),
+    #=======================================
     #second Tab Item is for state comparison
     #=======================================
     tabItem(tabName = "comparison",
             #  h4("State Comparison"),
             fluidRow(class = "myRow1", 
                      column(width=6, offset=0, 
-                            fluidRow(
-                            #    h4("Illinois"),
-                            tags$style("input[type=checkbox] {
-                    transform: scale(.8);
-           }"),
-                            
-                            tags$style("#map2source {
-                    font-size:12px;
-                    height:12px;
-           }"),
+           #                 
+           #                  #    h4("Illinois"),
+           #                  tags$style("input[type=checkbox] {
+           #          transform: scale(.8);
+           # }"),
+           # 
+           #                  tags$style("#map2source {
+           #          font-size:12px;
+           #          height:12px;
+           # }"),
+           box(
+             title = "Select Energy Sources for Map 1", status = "primary", width = 12,
+             collapsible = TRUE, collapsed = TRUE,
+                            checkboxInput('allmap2','Select All',value= TRUE),
+                            checkboxInput('allmap2R','Select Renewables',value= FALSE),
+                            checkboxInput('allmap2NR','Select Non-Renewables',value= FALSE),
                             checkboxGroupInput("map2source", 
                                                h6("Select Energy:"), 
-                                               choices = c("All" = "All",
-                                                           "Coal" = "Coal", "Oil"="Oil","Geothermal" = "Geothermal", "Hydro" = "Hydro",
-                                                           "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
-                                                           "Oil" = "Oil", "Solar" = "Solar", "Wind" = "Wind", 
-                                                           "Biomass" = "Biomass","Other"="Other","Renewables"="Renewables",
-                                                           "Non-Renewables"="Non-Renewables"),
-                                               selected = "All",
-                                               inline = TRUE
-                            )),
+                                               choices = sources,
+                                               inline = TRUE,
+                                               selected = sources
+                            )#end Check cbox
+                            
+           )
                             
                             ),
                      
@@ -241,24 +256,31 @@ body<-dashboardBody(
                      
                      column(width=6, offset=0, 
                             #    h4("Illinois"),
-                                                tags$style("input[type=checkbox] {
-                                        transform: scale(.8);
-                               }"),
-                                                
-                                                tags$style("#map3source {
-                                        font-size:12px;
-                                        height:12px;
-                               }"),
+                            #                     tags$style("input[type=checkbox] {
+                            #             transform: scale(.8);
+                            #    }"),
+                            #                     
+                            #                     tags$style("#map3source {
+                            #             font-size:12px;
+                            #             height:12px;
+                            #    }"),
+                            # tags$style(type="text/css", HTML("#map3source>*{float: left; margin-right: 15px; height: 20px;}")),
+                            box(
+                              title = "Select Energy Sources for Map 2", status = "primary", width = 12,
+                              collapsible = TRUE, collapsed = TRUE,
+                            
+                            checkboxInput('allmap3','Select All',value= TRUE),
+                            checkboxInput('allmap3R','Select Renewables',value= FALSE),
+                            checkboxInput('allmap3NR','Select Non-Renewables',value= FALSE),
                             checkboxGroupInput("map3source", 
                                                h6("Select Energy:"), 
-                                               choices = c("All" = "All",
-                                                           "Coal" = "Coal", "Geothermal" = "Geothermal", "Hydro" = "Hydro",
-                                                           "Natural Gas"  ="Natural Gas" , "Nuclear" = "Nuclear", 
-                                                           "Oil" = "Oil", "Solar" = "Solar", "Wind" = "Wind", 
-                                                           "Biomass" = "Biomass","Other"="Other","Renewables"="Renewables",
-                                                           "Non-Renewables"="Non-Renewables"),
-                                               selected = "All",
-                                               inline = TRUE))
+                                               choices = sources,
+                                               inline = TRUE,
+                                               selected = sources
+                            )#end Checkbox
+                            )
+                            
+                            )
                      
             ),
             # ),#end of myRow1
@@ -268,13 +290,13 @@ body<-dashboardBody(
                             fluidRow(
                               column(4, 
                                    
-                                       div(style = "height:58.5px"),
-                                     selectInput('state1', 'State1', choiceState, selected = "IL")
+                                       div(style = "height:10.5px"),
+                                     selectInput('state1', 'State1', choiceState, selected = "IL",width =50)
                               ),
                               
                               column(4,
-                                     div(style = "height:58.5px"),
-                                     selectInput("year1", "Year1", choiceYears, selected = 2000)
+                                     div(style = "height:10.5px"),
+                                     selectInput("year1", "Year1", choiceYears, selected = 2000, width = 50)
                               )
                             ),
                             
@@ -297,12 +319,12 @@ body<-dashboardBody(
                      column(6,
                             fluidRow(
                               column(4, 
-                                     div(style = "height:58.5px"),
+                                     div(style = "height:10.5px"),
                                      selectInput('state2', 'State2', choiceState, selected = "IL")
                               ),
                               
                               column(4,
-                                     div(style = "height:58.5px"),
+                                     div(style = "height:10.5px"),
                                      selectInput("year2", "Year2", choiceYears, selected = 2018)
                               )
                             ),
@@ -325,25 +347,65 @@ body<-dashboardBody(
             
     ), #end of second tabItem
     
+    #============================================================================
     #third tab for US
+    #============================================================================
+    
     tabItem(tabName = "us",
             h4("United States Power Plants"),
             #end of fluid row
             fluidRow(
-              column(width=10, offset = 1,
+              column(width=5, offset = 1,
                      box(
-                       title = "Select generation amount range", status = "primary", width = 12,
-                       collapsible = TRUE,
+                  
+                       title = "Filter plants by Energy generation", status = "primary", width = 12,
+                       collapsible = TRUE, collapsed = TRUE,
                        #small power plants will be under 1500KMWH and larger ones will be <1500KMWH
-                       sliderInput("range1","Select the Energy Generation Range(KWMh", min=0,max=16000, value=0),
-                       sliderInput("range2","Select the Energy Generation Range(KWMh", min=16000,max=32000, value=32000)
+                       sliderInput("range1","Select the Energy Generation Range(KWMh", min=0,max=16000, value=0,width = 200),
+                       sliderInput("range2","Select the Energy Generation Range(KWMh", min=16000,max=32000, value=32000,width = 200),
+                     ),       #box end  
+              ),#col end
+                     column(width =5, offset = 0,
+                     fluidRow(
+                       box(
+                         
+                         title = "Filter plants by Source", status = "primary", width = 12, 
+                         collapsible = TRUE,collapsed = TRUE,
+                               tags$style("input[type=checkbox] {
+                                                transform: scale(.8);
+                                       }"),
+                               
+                               # tags$style("#mapUSsource {
+                               #                  font-size:12px;
+                               #                  height:22px;
+                               #         }"),
+                               # 
+                          checkboxInput('allmapUS','Select All',value= TRUE),
+                         checkboxInput('allmapR','Select Renewables',value= FALSE),
+                         checkboxInput('allmapNR','Select Non-Renewables',value= FALSE),
+                               checkboxGroupInput("mapUSsource", 
+                                                  h6("Select Energy:"), 
+                                                  choices = sources,
+                                                  inline = TRUE,
+                                                  selected = sources
+                                                 ),
+                         
+                         div(style = "height:30.5px")
+                        
+                         
+                               ),#end box
+                       selectInput("yearUS", "Year", choiceYears, selected = 2018)
+                     ),
+                     # fluidRow(
+                     #   
+                     #   
+                     #   div(style = "height:58.5px"),
+                     #   selectInput("yearUS", "Year", choiceYears, selected = 2018)
+                     # )
+                     
                      )
                      
-                     
-              )
-              
-              
-            ),
+                ),
             fluidRow(
               column(width=10, offset=1,
                      box(
@@ -355,8 +417,27 @@ body<-dashboardBody(
             )
     ),#tabitem 3 end
     
+    #============================================
+    #TAB3: ABOUT
+    #============================================
+    
     tabItem(tabName = "about",
-            h2("About")
+            h2("About"),
+            mainPanel(
+              h4("Thanks for visiting the Energy Source App."),
+              h4("Data Source:The original data is available from https://www.epa.gov/egrid/download-dat"),
+              h5("App developer: Rabia Ibtasar"),
+              h5("What is this application for?"),
+              h5(" 
+                  This interactive application has been designed to allow visitors to
+                  visualize the change in America's energy sources over time. It provides data on multiple years(2000,2010,2018) and
+              provides information for all 50 states. Site visitors are able to see the changing trend in the US for renewable and non-renewable 
+              energy sources over time. 
+              This applicaiton can be helpful in understanding how US energy production has grown and what energy sources have become important.")
+                        
+            )
+            
+           # verbatimTextOutput("AboutOut")
     )
     
   )#end of tabitems
@@ -373,7 +454,9 @@ ui <- dashboardPage(skin = "purple",
 #START OF SERVER FUNCTION
 #========================
 
-server <- function(input, output) {
+server <- function(input, output,session) {
+  
+  
   
   
   markersBySources <-lapply(c("PLGENACL","PLGENAOL","PLGENAGS",
@@ -381,49 +464,77 @@ server <- function(input, output) {
                               "PLGENAHY","PLGENASO","PLGENABM",
                               "PLGENAGT"),function(sources)subset(illData,
                                       illData[sources]>0))
-  #create reactive function to respond to user selection and subset data according to what is selected
   
-  filter <-reactive({
-    
-  markersBySources <-lapply(input$source2,function(sources)subset(illData,
-                                                                  illData[sources]>0))
-  
-  #create reactive functions for TAB 2
-  
-  map2dataReactive<- reactive({
-    
-    
-    
-    
-  })
-  
-  
-  
- })
-  
-  opacity=0.5
-  #===========================================
-  
-  filterData<-reactive({ 
-    
-    if('All' %in% input$source1)
-    {
-      illData
-    }
-    if('PLGENACL' %in% input$source1)
-    {  
-      subset(illData,PLGENACL>0)
+  #setup observe for checkbox inputs on TAB1 
+  observe({
+    updateCheckboxGroupInput(
+      session, 'mapILsource',choices = sources,
+      selected = if(input$allmapIL) sources 
       
-    }
-   
-    else{  
-      illData
-    }
+    )
   })
+  
+  #setup observe for checkbox inouts
+  observe({
+    updateCheckboxGroupInput(
+      session, 'mapILsource',choices = sources,
+      selected = if(input$allmapILR) sources[1:5] 
+      
+    )
+  })
+  
+  #setup observe for checkbox inouts
+  observe({
+    updateCheckboxGroupInput(
+      session, 'mapILsource',choices = sources,
+      selected = if(input$allmapILNR) sources[6:10] 
+      
+    )
+  })
+  
+  
+  # 
+  # filter <-reactive({
+  #   
+  #   markersBySources <-lapply(input$source2,function(sources)subset(illData,
+  #                                                                   illData[sources]>0))
+  #   
+  #   #create reactive functions for TAB 2
+  #   
+  #   map2dataReactive<- reactive({
+  #     
+  #     
+  #     
+  #     
+  #   })
+  #opacity=0.5
+  
+  
+  #----------------
+  #TAB 1 REACTIVES
+  #----------------
+  
+  #create reactive function to respond to check box inputs and subset data according to what is selected
+  # 
+  # filterILdata<-reactive({ 
+  #   
+  #   if('Coal' %in% input$mapILsource)
+  #   {
+  #     t<-subset(illData,illData$PLGENACL>0)
+  #     t    
+  #   }
+  #   if('Oil' %in% input$map$ILsource)
+  #   {  
+  #     t<-subset(illData,PLGENACO>0)
+  #     
+  #   }
+  #  
+  #   else{  
+  #     illData
+  #   }
+  # })
   
 #==============================================
-  
-  
   #render basic map1 for Illinois 
   output$map1 <- renderLeaflet({
      
@@ -445,108 +556,114 @@ server <- function(input, output) {
     
   })
     
-    
-    
-
   #Use leaflet Proxy to Addmarkers according to check box inputs
-  #create an observe event to change markers according to checkboxes
-  observeEvent(input$source1,
-  {
+  
+  observeEvent(input$allmapIL,{
   #if ALL is selected then we display all the markers in ILL
   # Incremental changes to the map  should be performed in
   # an observer. Each independent set of things that can change
   # should be managed in its own observer.
-    if('All' %in% input$source1)
-      {
-                    proxy<-leafletProxy("map1") 
-                    proxy %>% 
+    proxy<-leafletProxy("map1") 
+                     
+                    proxy %>% clearMarkers() %>%
                      #Coal markers 
                      addCircleMarkers(markersBySources[[1]]$LON, markersBySources[[1]]$LAT,
                                       layerId=paste(markersBySources[[1]]$PLGENACL), 
                                       popup = paste(sep = "<br/>",paste("<b>","Coal Generation",markersBySources[[1]]$PLGENACL,"</b>")), 
                                       fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= coColor) %>%
                      
                      #Oil markers
                      addCircleMarkers(markersBySources[[2]]$LON, markersBySources[[2]]$LAT,
                                       layerId=paste(markersBySources[[2]]$PLGENAOL), 
                                       popup = paste(sep = "<br/>",paste("<b>","Oil Generation=",markersBySources[[2]]$PLGENAOL,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= oilColor) %>%
                      
                      #Gas markers
                      addCircleMarkers(markersBySources[[3]]$LON, markersBySources[[3]]$LAT,
                                       layerId=paste(markersBySources[[3]]$PLGENAGS), 
                                       popup = paste(sep = "<br/>",paste("<b>","Gas Generation=",markersBySources[[3]]$PLGENAGS,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= gasColor) %>%
                      
                      #Nuclear markers
                      addCircleMarkers(markersBySources[[4]]$LON, markersBySources[[4]]$LAT,
                                       layerId=paste(markersBySources[[4]]$PLGENANC), 
                                       popup = paste(sep = "<br/>",paste("<b>","Nuclear Generation=",markersBySources[[4]]$PLGENANC,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= nuColor) %>%
                      
                      #Other markers
                      addCircleMarkers(markersBySources[[5]]$LON, markersBySources[[5]]$LAT,
                                       layerId=paste(markersBySources[[5]]$PLGENAOF), 
                                       popup = paste(sep = "<br/>",paste("<b>","Other Generation",markersBySources[[5]]$PLGENAOF,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= otColor) %>%
                      
                      #Wind markers
                      addCircleMarkers(markersBySources[[6]]$LON, markersBySources[[6]]$LAT,
                                       layerId=paste(markersBySources[[6]]$PLGENAWI), 
                                       popup = paste(sep = "<br/>",paste("<b>","Wind Generation",markersBySources[[6]]$PLGENAWI,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= wiColor) %>%
                      
                      #Hydro  
                      addCircleMarkers(markersBySources[[7]]$LON, markersBySources[[7]]$LAT,
                                       layerId=paste(markersBySources[[7]]$PLGENAHY), 
                                       popup = paste(sep = "<br/>",paste("<b>","Hydro Generation",markersBySources[[7]]$PLGENAHY,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= hyColor) %>%
                      
                      #Solar  
                      addCircleMarkers(markersBySources[[8]]$LON, markersBySources[[8]]$LAT,
                                       layerId=paste(markersBySources[[8]]$PLGENASO), 
                                       popup = paste(sep = "<br/>",paste("<b>","Solar Generation",markersBySources[[8]]$PLGENASO,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= soColor) %>%
                      
                      #Biomass
                      addCircleMarkers(markersBySources[[9]]$LON, markersBySources[[9]]$LAT,
                                       layerId=paste(markersBySources[[9]]$PLGENABM), 
                                       popup = paste(sep = "<br/>",paste("<b>","Biomass=",markersBySources[[9]]$PLGENABM,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
                                       color= bmColor) %>%
                      
                      #Geothermal
                      addCircleMarkers(markersBySources[[10]]$LON, markersBySources[[10]]$LAT,
                                       layerId=paste(markersBySources[[10]]$PLGENAGT), 
                                       popup = paste(sep = "<br/>",paste("<b>","GeoThermal Generation",markersBySources[[10]]$PLGENAGT,"</b>")), 
-                                      fillOpacity = opacity, 
-                                      color= gtColor)
-                   
-    }
-    if('Coal' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
+                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      color= gtColor) %>%
+                      
+                      
+                    addLegend(position = "bottomright",pal=pal, values=sources,
+                              title = "Energy Sources")
+                    
+
+  }) #end observer
+  
+  coalreactive<-reactive(
+
+    if('Coal' %in% input$mapILsource)
+     {
+    #   
+      leafletProxy("map1") %>% clearMarkers() %>%
         #Coal markers 
         addCircleMarkers(markersBySources[[1]]$LON, markersBySources[[1]]$LAT,
                          layerId=paste(markersBySources[[1]]$PLGENACL), 
                          popup = paste(sep = "<br/>",paste("<b>","Coal Generation",markersBySources[[1]]$PLGENACL,"</b>")), 
                          fillOpacity = opacity, 
                          color= coColor)
-        
-    }
-    if('Oil' %in% input$source1)
+  }
+  )#end of observe Event
+  
+  observe ({
+    if('Oil' %in% input$mapILsource)
     {
       
-      leafletProxy("map1") %>% 
+      leafletProxy("map1") %>% clearMarkers() %>%
         #Oil markers
         addCircleMarkers(markersBySources[[2]]$LON, markersBySources[[2]]$LAT,
                          layerId=paste(markersBySources[[2]]$PLGENAOL), 
@@ -555,197 +672,201 @@ server <- function(input, output) {
                          color= oilColor)
       
     }
-    if('Gas' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Gas markers
-        addCircleMarkers(markersBySources[[3]]$LON, markersBySources[[3]]$LAT,
-                         layerId=paste(markersBySources[[3]]$PLGENAGS), 
-                         popup = paste(sep = "<br/>",paste("<b>","Gas Generation=",markersBySources[[3]]$PLGENAGS,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= gasColor) 
-      
-    }
-    if('Nuclear' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Nuclear markers
-        addCircleMarkers(markersBySources[[4]]$LON, markersBySources[[4]]$LAT,
-                         layerId=paste(markersBySources[[4]]$PLGENANC), 
-                         popup = paste(sep = "<br/>",paste("<b>","Nuclear Generation=",markersBySources[[4]]$PLGENANC,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= nuColor) 
-      
-    }
-    if('Other' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Other markers
-        addCircleMarkers(markersBySources[[5]]$LON, markersBySources[[5]]$LAT,
-                         layerId=paste(markersBySources[[5]]$PLGENAOF), 
-                         popup = paste(sep = "<br/>",paste("<b>","Other Generation",markersBySources[[5]]$PLGENAOF,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= otColor)
-      
-    }
-    if('Hydro' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Hydro  
-        addCircleMarkers(markersBySources[[7]]$LON, markersBySources[[7]]$LAT,
-                         layerId=paste(markersBySources[[7]]$PLGENAHY), 
-                         popup = paste(sep = "<br/>",paste("<b>","Hydro Generation",markersBySources[[7]]$PLGENAHY,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= hyColor)
-      
-    }
-    if('Wind' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Wind markers
-        addCircleMarkers(markersBySources[[6]]$LON, markersBySources[[6]]$LAT,
-                         layerId=paste(markersBySources[[6]]$PLGENAWI), 
-                         popup = paste(sep = "<br/>",paste("<b>","Wind Generation",markersBySources[[6]]$PLGENAWI,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= wiColor) 
-      
-    }
-    if('Solar' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Solar  
-        addCircleMarkers(markersBySources[[8]]$LON, markersBySources[[8]]$LAT,
-                         layerId=paste(markersBySources[[8]]$PLGENASO), 
-                         popup = paste(sep = "<br/>",paste("<b>","Solar Generation",markersBySources[[8]]$PLGENASO,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= soColor)
-      
-    }
-    if('Biomass' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Biomass
-        addCircleMarkers(markersBySources[[9]]$LON, markersBySources[[9]]$LAT,
-                         layerId=paste(markersBySources[[9]]$PLGENABM), 
-                         popup = paste(sep = "<br/>",paste("<b>","Biomass=",markersBySources[[9]]$PLGENABM,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= bmColor)
-      
-    }
-    if('Geothermal' %in% input$source1)
-    {
-      
-      leafletProxy("map1") %>% 
-        #Geothermal
-        addCircleMarkers(markersBySources[[10]]$LON, markersBySources[[10]]$LAT,
-                         layerId=paste(markersBySources[[10]]$PLGENAGT), 
-                         popup = paste(sep = "<br/>",paste("<b>","GeoThermal Generation",markersBySources[[10]]$PLGENAGT,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= gtColor)
-      
-    }
-    if('Non-Renewables' %in% input$source1)
-    {
-      leafletProxy("map1") %>% 
-      #Wind markers
-      addCircleMarkers(markersBySources[[6]]$LON, markersBySources[[6]]$LAT,
-                       layerId=paste(markersBySources[[6]]$PLGENAWI), 
-                       popup = paste(sep = "<br/>",paste("<b>","Wind Generation",markersBySources[[6]]$PLGENAWI,"</b>")), 
-                       fillOpacity = opacity, 
-                       color= wiColor) %>%
-        
-        #Hydro  
-        addCircleMarkers(markersBySources[[7]]$LON, markersBySources[[7]]$LAT,
-                         layerId=paste(markersBySources[[7]]$PLGENAHY), 
-                         popup = paste(sep = "<br/>",paste("<b>","Hydro Generation",markersBySources[[7]]$PLGENAHY,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= hyColor) %>%
-        
-        #Solar  
-        addCircleMarkers(markersBySources[[8]]$LON, markersBySources[[8]]$LAT,
-                         layerId=paste(markersBySources[[8]]$PLGENASO), 
-                         popup = paste(sep = "<br/>",paste("<b>","Solar Generation",markersBySources[[8]]$PLGENASO,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= soColor) %>%
-        
-        #Biomass
-        addCircleMarkers(markersBySources[[9]]$LON, markersBySources[[9]]$LAT,
-                         layerId=paste(markersBySources[[9]]$PLGENABM), 
-                         popup = paste(sep = "<br/>",paste("<b>","Biomass=",markersBySources[[9]]$PLGENABM,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= bmColor) %>%
-        
-        #Geothermal
-        addCircleMarkers(markersBySources[[10]]$LON, markersBySources[[10]]$LAT,
-                         layerId=paste(markersBySources[[10]]$PLGENAGT), 
-                         popup = paste(sep = "<br/>",paste("<b>","GeoThermal Generation",markersBySources[[10]]$PLGENAGT,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= gtColor)
-      
-    }
-    if('Renewables' %in% input$source1)
-    {
-      
-      proxy %>% 
-        #Coal markers 
-        addCircleMarkers(markersBySources[[1]]$LON, markersBySources[[1]]$LAT,
-                         layerId=paste(markersBySources[[1]]$PLGENACL), 
-                         popup = paste(sep = "<br/>",paste("<b>","Coal Generation",markersBySources[[1]]$PLGENACL,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= coColor) %>%
-        
-        #Oil markers
-        addCircleMarkers(markersBySources[[2]]$LON, markersBySources[[2]]$LAT,
-                         layerId=paste(markersBySources[[2]]$PLGENAOL), 
-                         popup = paste(sep = "<br/>",paste("<b>","Oil Generation=",markersBySources[[2]]$PLGENAOL,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= oilColor) %>%
-        
-        #Gas markers
-        addCircleMarkers(markersBySources[[3]]$LON, markersBySources[[3]]$LAT,
-                         layerId=paste(markersBySources[[3]]$PLGENAGS), 
-                         popup = paste(sep = "<br/>",paste("<b>","Gas Generation=",markersBySources[[3]]$PLGENAGS,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= gasColor) %>%
-        
-        #Nuclear markers
-        addCircleMarkers(markersBySources[[4]]$LON, markersBySources[[4]]$LAT,
-                         layerId=paste(markersBySources[[4]]$PLGENANC), 
-                         popup = paste(sep = "<br/>",paste("<b>","Nuclear Generation=",markersBySources[[4]]$PLGENANC,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= nuColor) %>%
-        
-        #Other markers
-        addCircleMarkers(markersBySources[[5]]$LON, markersBySources[[5]]$LAT,
-                         layerId=paste(markersBySources[[5]]$PLGENAOF), 
-                         popup = paste(sep = "<br/>",paste("<b>","Other Generation",markersBySources[[5]]$PLGENAOF,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= otColor) 
-
-    }
-    else
-    {
-      leafletProxy("map1") %>% clearMarkers() %>%
-        addTiles() %>%  # Add default OpenStreetMap map tiles
-        setView(lng=-87.623, lat=41.881,zoom=5) %>%
-        addResetMapButton()%>%
-        addProviderTiles(providers$OpenTopoMap, group = "Topo") %>%
-        addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") %>%
-        # Layers control
-        addLayersControl(
-          baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
-          #overlayGroups = c("Quakes", "Outline"),
-          options = layersControlOptions(collapsed = FALSE))
-      
-    }#end of else
-  })#end of observe Event
+  })
+    # 
+    # if('Gas' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Gas markers
+    #     addCircleMarkers(markersBySources[[3]]$LON, markersBySources[[3]]$LAT,
+    #                      layerId=paste(markersBySources[[3]]$PLGENAGS), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","Gas Generation=",markersBySources[[3]]$PLGENAGS,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= gasColor) 
+    #   
+    # }
+    # if('Nuclear' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Nuclear markers
+    #     addCircleMarkers(markersBySources[[4]]$LON, markersBySources[[4]]$LAT,
+    #                      layerId=paste(markersBySources[[4]]$PLGENANC), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","Nuclear Generation=",markersBySources[[4]]$PLGENANC,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= nuColor) 
+    #   
+    # }
+    # if('Other' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Other markers
+    #     addCircleMarkers(markersBySources[[5]]$LON, markersBySources[[5]]$LAT,
+    #                      layerId=paste(markersBySources[[5]]$PLGENAOF), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","Other Generation",markersBySources[[5]]$PLGENAOF,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= otColor)
+    #   
+    # }
+    # if('Hydro' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Hydro  
+    #     addCircleMarkers(markersBySources[[7]]$LON, markersBySources[[7]]$LAT,
+    #                      layerId=paste(markersBySources[[7]]$PLGENAHY), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","Hydro Generation",markersBySources[[7]]$PLGENAHY,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= hyColor)
+    #   
+    # }
+    # if('Wind' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Wind markers
+    #     addCircleMarkers(markersBySources[[6]]$LON, markersBySources[[6]]$LAT,
+    #                      layerId=paste(markersBySources[[6]]$PLGENAWI), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","Wind Generation",markersBySources[[6]]$PLGENAWI,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= wiColor) 
+    #   
+    # }
+    # if('Solar' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Solar  
+    #     addCircleMarkers(markersBySources[[8]]$LON, markersBySources[[8]]$LAT,
+    #                      layerId=paste(markersBySources[[8]]$PLGENASO), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","Solar Generation",markersBySources[[8]]$PLGENASO,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= soColor)
+    #   
+    # }
+    # if('Biomass' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Biomass
+    #     addCircleMarkers(markersBySources[[9]]$LON, markersBySources[[9]]$LAT,
+    #                      layerId=paste(markersBySources[[9]]$PLGENABM), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","Biomass=",markersBySources[[9]]$PLGENABM,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= bmColor)
+    #   
+    # }
+    # if('Geothermal' %in% input$source1)
+    # {
+    #   
+    #   leafletProxy("map1") %>% 
+    #     #Geothermal
+    #     addCircleMarkers(markersBySources[[10]]$LON, markersBySources[[10]]$LAT,
+    #                      layerId=paste(markersBySources[[10]]$PLGENAGT), 
+    #                      popup = paste(sep = "<br/>",paste("<b>","GeoThermal Generation",markersBySources[[10]]$PLGENAGT,"</b>")), 
+    #                      fillOpacity = opacity, 
+    #                      color= gtColor)
+    #   
+    # }
+  
+#---
+  #   if('Non-Renewables' %in% input$source1)
+  #   {
+  #     leafletProxy("map1") %>% 
+  #     #Wind markers
+  #     addCircleMarkers(markersBySources[[6]]$LON, markersBySources[[6]]$LAT,
+  #                      layerId=paste(markersBySources[[6]]$PLGENAWI), 
+  #                      popup = paste(sep = "<br/>",paste("<b>","Wind Generation",markersBySources[[6]]$PLGENAWI,"</b>")), 
+  #                      fillOpacity = opacity, 
+  #                      color= wiColor) %>%
+  #       
+  #       #Hydro  
+  #       addCircleMarkers(markersBySources[[7]]$LON, markersBySources[[7]]$LAT,
+  #                        layerId=paste(markersBySources[[7]]$PLGENAHY), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Hydro Generation",markersBySources[[7]]$PLGENAHY,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= hyColor) %>%
+  #       
+  #       #Solar  
+  #       addCircleMarkers(markersBySources[[8]]$LON, markersBySources[[8]]$LAT,
+  #                        layerId=paste(markersBySources[[8]]$PLGENASO), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Solar Generation",markersBySources[[8]]$PLGENASO,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= soColor) %>%
+  #       
+  #       #Biomass
+  #       addCircleMarkers(markersBySources[[9]]$LON, markersBySources[[9]]$LAT,
+  #                        layerId=paste(markersBySources[[9]]$PLGENABM), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Biomass=",markersBySources[[9]]$PLGENABM,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= bmColor) %>%
+  #       
+  #       #Geothermal
+  #       addCircleMarkers(markersBySources[[10]]$LON, markersBySources[[10]]$LAT,
+  #                        layerId=paste(markersBySources[[10]]$PLGENAGT), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","GeoThermal Generation",markersBySources[[10]]$PLGENAGT,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= gtColor)
+  #     
+  #   }
+  #   if('Renewables' %in% input$source1)
+  #   {
+  #     
+  #     proxy %>% 
+  #       #Coal markers 
+  #       addCircleMarkers(markersBySources[[1]]$LON, markersBySources[[1]]$LAT,
+  #                        layerId=paste(markersBySources[[1]]$PLGENACL), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Coal Generation",markersBySources[[1]]$PLGENACL,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= coColor) %>%
+  #       
+  #       #Oil markers
+  #       addCircleMarkers(markersBySources[[2]]$LON, markersBySources[[2]]$LAT,
+  #                        layerId=paste(markersBySources[[2]]$PLGENAOL), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Oil Generation=",markersBySources[[2]]$PLGENAOL,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= oilColor) %>%
+  #       
+  #       #Gas markers
+  #       addCircleMarkers(markersBySources[[3]]$LON, markersBySources[[3]]$LAT,
+  #                        layerId=paste(markersBySources[[3]]$PLGENAGS), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Gas Generation=",markersBySources[[3]]$PLGENAGS,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= gasColor) %>%
+  #       
+  #       #Nuclear markers
+  #       addCircleMarkers(markersBySources[[4]]$LON, markersBySources[[4]]$LAT,
+  #                        layerId=paste(markersBySources[[4]]$PLGENANC), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Nuclear Generation=",markersBySources[[4]]$PLGENANC,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= nuColor) %>%
+  #       
+  #       #Other markers
+  #       addCircleMarkers(markersBySources[[5]]$LON, markersBySources[[5]]$LAT,
+  #                        layerId=paste(markersBySources[[5]]$PLGENAOF), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Other Generation",markersBySources[[5]]$PLGENAOF,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= otColor) 
+  # 
+  #   }
+  #   else
+  #   {
+  #     leafletProxy("map1") %>% clearMarkers() %>%
+  #       addTiles() %>%  # Add default OpenStreetMap map tiles
+  #       setView(lng=-87.623, lat=41.881,zoom=5) %>%
+  #       addResetMapButton()%>%
+  #       addProviderTiles(providers$OpenTopoMap, group = "Topo") %>%
+  #       addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") %>%
+  #       # Layers control
+  #       addLayersControl(
+  #         baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
+  #         #overlayGroups = c("Quakes", "Outline"),
+  #         options = layersControlOptions(collapsed = FALSE))
+  #     
+  #   }#end of else
+  # })#end of observe Event
 
   
   # Use a separate observer to recreate the legend as needed.
@@ -767,9 +888,68 @@ server <- function(input, output) {
   #===============================================================
   #comparison Maps Render initial maps and then use leaflet proxy to addMarkers
   #for optimization
+
+  #setup observe for checkbox inputs on TAB2  
+  observe({
+    updateCheckboxGroupInput(
+      session, 'map2source',choices = sources,
+      selected = if(input$allmap2) sources 
+      
+    )
+  })
+  
+  #setup observe for checkbox inouts
+  observe({
+    updateCheckboxGroupInput(
+      session, 'map2source',choices = sources,
+      selected = if(input$allmap2R) sources[1:5] 
+      
+    )
+  })
+  
+  #setup observe for checkbox inouts
+  observe({
+    updateCheckboxGroupInput(
+      session, 'map2source',choices = sources,
+      selected = if(input$allmap2NR) sources[6:10] 
+      
+    )
+  })
+  
+  #setup observe for SECOND checkbox inputs for map3  
+  observe({
+    updateCheckboxGroupInput(
+      session, 'map3source',choices = sources,
+      selected = if(input$allmap3) sources 
+      
+    )
+  })
+  
+  #setup observe for check box inputs
+  observe({
+    updateCheckboxGroupInput(
+      session, 'map3source',choices = sources,
+      selected = if(input$allmap3R) sources[1:5] 
+      
+    )
+  })
+  
+  #setup observe for check box inputs
+  observe({
+    updateCheckboxGroupInput(
+      session, 'map3source',choices = sources,
+      selected = if(input$allmap3NR) sources[6:10] 
+      
+    )
+  })
+
+    #TAB 2 OUTPUTS
+    #-------------
+  
+  
   #input$state1 & input$year1
   # state.abb[input$state1] to get the abbreviations from the input values
-  tstate<-reactive({input$state1})
+  #tstate<-reactive({input$state1})
   
   #map1 reactive is dependent upon input$map2source & input$year1 &input$state1
   map2dataset<- reactive({
@@ -912,10 +1092,69 @@ server <- function(input, output) {
     
   })
   
+  #TAB 3 OUTPUTS
+  #-------------
+  
+  #setup observe for checkbox inputs
+  observe({
+    updateCheckboxGroupInput(
+      session, 'mapUSsource',choices = sources,
+      selected = if(input$allmapUS) sources 
+      
+    )
+  })
+  
+  #setup observe for checkbox inouts
+  observe({
+    updateCheckboxGroupInput(
+      session, 'mapUSsource',choices = sources,
+      selected = if(input$allmapR) sources[1:5] 
+      
+    )
+  })
+  
+  #setup observe for checkbox inouts
+  observe({
+    updateCheckboxGroupInput(
+      session, 'mapUSsource',choices = sources,
+      selected = if(input$allmapNR) sources[6:10] 
+      
+    )
+  })
+  
+  #set up reactives for ALL US
+  
+  #map1 reactive is dependent upon input$map2source & input$year1 &input$state1
+  mapUSdata<- reactive({
+    #first filter dataset by Year
+    if(input$yearUS==2000)
+    {
+      tdata<-d2
+     
+    }
+    else if(input$year1==2010)
+    {
+      tdata<-d3
+      #tdata<-subset(allUS,allUS$YEAR==input$yearUS)
+    }
+    else 
+    {
+      tdata<-d1
+      #tdata<-subset(tdata,tdata$YEAR==2018)
+      
+    }
+    #then subset dataset according to the State
+    #use function statetoabbr to convert to state abbreviations- may need state2abbr("Illinois")
+    
+    #tdata<-subset(tdata,tdata$PSTATABB==(state2abbr(input$state1)))
+    tdata
+  })
+  
+  
   output$mapUS <- renderLeaflet({
     
     
-    leaflet(data=map2dataset(),width = "50%") %>%
+    leaflet(data=mapUSdata(),width = "50%") %>%
       addTiles() %>%  # Add default OpenStreetMap map tiles
       # addMarkers(lng=-87.623, lat=41.881, popup="The birthplace of R") %>%
       setView(lng=-87.623, lat=41.881,zoom=5) %>%
@@ -927,29 +1166,61 @@ server <- function(input, output) {
         baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
         #overlayGroups = c("Renewables", "Non-renewables"),
         options = layersControlOptions(collapsed = FALSE)) %>%
-      
       setView(lng = mean(map2dataset()$LON), lat = mean(map2dataset()$LAT), zoom = 3) %>%
-      
-      addLegend(position = "bottomleft", pal=pal, values=sources,
-                title = "Energy Sources") %>%
-      #addMarkers
       addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
                        # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
-                       radius =~sqrt(map2dataset()$PLNGENAN/100000),
+                       radius =~ifelse((mapUSdata()$PLNGENAN< mean(mapUSdata()$PLNGENAN)),2,6),
                        #layerId=paste(PLNGENAN), 
-                       popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
-                                     #"<br>Total Generation",PLNGENAN,
-                                     # "<br>Percent Renewable:",PLTRPR,
-                                     "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
+                       popup = paste("<b>","Plant Name:", mapUSdata()$PNAME,
+                                     "<br>Total Generation",mapUSdata()$PLNGENAN,
+                                     "<br>Percent Renewable:",mapUSdata()$PLTRPR,
+                                     "<br>Percent Non-renewable:",mapUSdata()$PLTNPR,"</b>"), 
                        #stroke=FALSE,
-                       fillOpacity = 0.5)       
-    # clusterOptions=markerClusterOptions())
-    
+                       fillOpacity = 0.5,
+                       clusterOptions=markerClusterOptions()
+                       ) 
+      
   })
   
   
- 
+  # observe({
+  #     
+  #     # addLegend(position = "bottomleft", pal=pal, values=sources,
+  #     #           title = "Energy Sources") %>%
+  #     #addMarkers
+  #     
+  #     leafletProxy(mapUS,data = mapUSdata) %>% 
+  #       addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
+  #                      # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
+  #                      radius =~sqrt(map2dataset()$PLNGENAN/100000),
+  #                      #layerId=paste(PLNGENAN), 
+  #                      popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
+  #                                    #"<br>Total Generation",PLNGENAN,
+  #                                    # "<br>Percent Renewable:",PLTRPR,
+  #                                    "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
+  #                      #stroke=FALSE,
+  #                      fillOpacity = 0.5)       
+  #   # clusterOptions=markerClusterOptions())
+  #   
+  # })
   
+  
+ #================================
+ #Output for About page
+  #===============================
+  #final print out for about page
+  output$AboutOut <- renderText({
+    "Created by: Rabia Ibtasar\n
+         Final Version: 3/13/2021\n
+         Data Source:The original data is available from https://www.epa.gov/egrid/download-dat\n
+         
+         What is this application for?\n
+  <p>         This interactive application has been designed to allow visitors to
+        visualize the change in America's energy sources over time. It provides data on multiple years(2000,2010,2018) and
+    provides information for all 50 states. Site visitors are able to see the changing trend in the US for renewable and non-renewable 
+    energy sources over time. 
+    This applicaiton can be helpful in understanding how US energy production has grown and what energy sources have become important.</p>"   
+  })
   
   
 }#server end

@@ -43,3 +43,8 @@ img.leaflet-tile {
   zoom: 1;
   *display: inline;
 }
+
+.leaflet-left .leaflet-control-scale {
+  display: inline-block;
+  float: none;
+}
