@@ -87,7 +87,7 @@ d1$YEAR<-2018
 d2$SEQPLT00<-NULL
 d3$SEQPLT10<-NULL
 
-#create a dataset with 2018,2010 plants for use in TAB3
+#create a dataset with 2018,2010 plants for use in TAB4 for New plant and idle plant information
 allUS<-rbind(d1,d3)
 
 #Assigning colors to sources
@@ -96,17 +96,17 @@ useColors<-c("Coal"="#8DD3C7","Geothermal"="#FFFFB3","Hydro"="#BEBADA",
              "Solar"="#B3DE69","Biomass"="#FCCDE5","Wind"="#D9D9D9",
              "Wood"="#BC80BD")
 
-sources<-c("Coal","Oil","Gas","Nuclear","Other","Hydro","Solar","Wind","Biomass","Geothermal")
+sources<-c("Coal","Oil","Gas","Nuclear","Other","Geothermal","Solar","Hydro","Wind","Biomass")
 renew<-c("Hydro","Solar","Wind","Biomass","Geothermal")
 nonrenew<-c("Coal","Oil","Gas","Nuclear","Other")
 
 #define the color palette
 #pal=colorFactor(palette = topo.colors(10),levels = sources)
-sourcepal= c("#FDB462","#FDB462","#FB8072","#80B1D3","#FCCDE5","#FFFFB3","#B3DE69","#BEBADA","#D9D9D9","#BC80BD")
+sourcepal= c("#8DD3C7","#FDB462","#FB8072","#80B1D3","#FCCDE5","#FFFFB3","#B3DE69","#BEBADA","#D9D9D9","#BC80BD")
 pal=colorFactor(palette = sourcepal,levels = sources)
 
 #non-renewables colors
-coColor<-"#FDB462"
+coColor<-"#8DD3C7"
 oilColor<-"#FDB462"
 gasColor<-"#FB8072"
 nuColor<-"#80B1D3"
@@ -145,11 +145,12 @@ mapSourcesList <- list(
 sidebar <-dashboardSidebar (disable = FALSE, collapsed = FALSE,
                             
                             sidebarMenu(
-                              menuItem("Illinois", tabName = "ill", icon =NULL),
+                              menuItem("Illinois Plants", tabName = "ill", icon =NULL),
                               #menuItem("", tabName = "cheapBlankSpace", icon = NULL),
                               #menuItem("", tabName = "cheapBlankSpace", icon = NULL),
                               menuItem("State Comparison", tabName = "comparison", icon =icon("dashboard")),
-                              menuItem("US", tabName = "us", icon =icon("globe")),
+                              menuItem("US Plants", tabName = "us", icon =icon("globe")),
+                              menuItem("US Comparison", tabName = "us2", icon =icon("globe")),
                               menuItem("About", tabName = "about", icon = NULL)
                             )
 )#dashboardsidebarend
@@ -307,7 +308,7 @@ body<-dashboardBody(
                                 collapsible = TRUE,
                                 
                                 h5("Locations of plants and energy production"),
-                                leafletOutput("map2", height=300)
+                                leafletOutput("map2", height=450)
                               )
                             ),
                             
@@ -336,7 +337,7 @@ body<-dashboardBody(
                                 collapsible = TRUE,
                                 
                                 h5("Locations of plants and energy production"),
-                                leafletOutput("map3", height=300)
+                                leafletOutput("map3", height=450)
                               )
                             )
                             
@@ -361,8 +362,8 @@ body<-dashboardBody(
                        title = "Filter plants by Energy generation", status = "primary", width = 12,
                        collapsible = TRUE, collapsed = TRUE,
                        #small power plants will be under 1500KMWH and larger ones will be <1500KMWH
-                       sliderInput("range1","Select the Energy Generation Range(KWMh", min=0,max=16000, value=0,width = 200),
-                       sliderInput("range2","Select the Energy Generation Range(KWMh", min=16000,max=32000, value=32000,width = 200),
+                       sliderInput("range1","Select the Generation Range(KWMh) to show smaller energy plants", min=0,max=16000, value=16000,width = 200),
+                       sliderInput("range2","Select the Generation Range(KWMh) to show larger energy plants", min=16000,max=32000, value=32000,width = 200),
                      ),       #box end  
               ),#col end
                      column(width =5, offset = 0,
@@ -411,14 +412,48 @@ body<-dashboardBody(
                      box(
                        title = "US Energy Plants", status = "primary", width = 12,
                        collapsible = TRUE,
-                       leafletOutput("mapUS",height=300)
+                       leafletOutput("mapUS",height=400)
                      )
               )
             )
     ),#tabitem 3 end
     
+    #============
+    #TAB4
+    #============
+    
+    tabItem(tabName = "us2",
+            h2("Compare US plants"),
+            fluidRow(
+              column(width=11, offset = 1,
+                     box(
+                       
+                       title = "Compare plants to see idle/added status", status = "primary", width = 12,
+                       collapsible = TRUE, collapsed = TRUE,
+                       #add rdiobutons
+                       radioButtons("UScompare", "Choose comparisons to view plants:",
+                                    c("Plants added in 2010(compared to 2000)" = "r1",
+                                      "Plants idled in 2010(compared to 2000)" = "r2",
+                                      "Plants added in 2018(compred to 2010)" = "r3",
+                                      "Plants idled in 2018(compared to 2010)" = "r4"))
+                       
+                     ),       #box end  
+              ),#col end
+              ),
+            fluidRow(
+              column(width=10, offset=1,
+                     box(
+                       title = "US Energy Plants", status = "primary", width = 12,
+                       collapsible = TRUE,
+                       leafletOutput("mapUS2",height=300)
+                     )
+              )
+            )
+            
+            ),#end of TAB4
+    
     #============================================
-    #TAB3: ABOUT
+    #TAB5: ABOUT
     #============================================
     
     tabItem(tabName = "about",
@@ -457,14 +492,9 @@ ui <- dashboardPage(skin = "purple",
 server <- function(input, output,session) {
   
   
+
   
-  
-  markersBySources <-lapply(c("PLGENACL","PLGENAOL","PLGENAGS",
-                              "PLGENANC","PLGENAOF","PLGENAWI",
-                              "PLGENAHY","PLGENASO","PLGENABM",
-                              "PLGENAGT"),function(sources)subset(illData,
-                                      illData[sources]>0))
-  
+
   #setup observe for checkbox inputs on TAB1 
   observe({
     updateCheckboxGroupInput(
@@ -533,11 +563,17 @@ server <- function(input, output,session) {
   #     illData
   #   }
   # })
+  markersBySources <-lapply(c("PLGENACL","PLGENAOL","PLGENAGS",
+                              "PLGENANC","PLGENAOF","PLGENAWI",
+                              "PLGENAHY","PLGENASO","PLGENABM",
+                              "PLGENAGT"),function(sources)subset(illData,
+                                                                  illData[sources]>0))
   
 #==============================================
   #render basic map1 for Illinois 
   output$map1 <- renderLeaflet({
      
+    
       leaflet() %>%
         
       #base groups
@@ -570,7 +606,8 @@ server <- function(input, output,session) {
                      addCircleMarkers(markersBySources[[1]]$LON, markersBySources[[1]]$LAT,
                                       layerId=paste(markersBySources[[1]]$PLGENACL), 
                                       popup = paste(sep = "<br/>",paste("<b>","Coal Generation",markersBySources[[1]]$PLGENACL,"</b>")), 
-                                      fillOpacity = opacity, 
+                                      fillOpacity = opacity,
+                                     
                                       clusterOptions = markerClusterOptions(),
                                       color= coColor) %>%
                      
@@ -578,49 +615,56 @@ server <- function(input, output,session) {
                      addCircleMarkers(markersBySources[[2]]$LON, markersBySources[[2]]$LAT,
                                       layerId=paste(markersBySources[[2]]$PLGENAOL), 
                                       popup = paste(sep = "<br/>",paste("<b>","Oil Generation=",markersBySources[[2]]$PLGENAOL,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= oilColor) %>%
                      
                      #Gas markers
                      addCircleMarkers(markersBySources[[3]]$LON, markersBySources[[3]]$LAT,
                                       layerId=paste(markersBySources[[3]]$PLGENAGS), 
                                       popup = paste(sep = "<br/>",paste("<b>","Gas Generation=",markersBySources[[3]]$PLGENAGS,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= gasColor) %>%
                      
                      #Nuclear markers
                      addCircleMarkers(markersBySources[[4]]$LON, markersBySources[[4]]$LAT,
                                       layerId=paste(markersBySources[[4]]$PLGENANC), 
                                       popup = paste(sep = "<br/>",paste("<b>","Nuclear Generation=",markersBySources[[4]]$PLGENANC,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= nuColor) %>%
                      
                      #Other markers
                      addCircleMarkers(markersBySources[[5]]$LON, markersBySources[[5]]$LAT,
                                       layerId=paste(markersBySources[[5]]$PLGENAOF), 
                                       popup = paste(sep = "<br/>",paste("<b>","Other Generation",markersBySources[[5]]$PLGENAOF,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= otColor) %>%
                      
                      #Wind markers
                      addCircleMarkers(markersBySources[[6]]$LON, markersBySources[[6]]$LAT,
                                       layerId=paste(markersBySources[[6]]$PLGENAWI), 
                                       popup = paste(sep = "<br/>",paste("<b>","Wind Generation",markersBySources[[6]]$PLGENAWI,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= wiColor) %>%
                      
                      #Hydro  
                      addCircleMarkers(markersBySources[[7]]$LON, markersBySources[[7]]$LAT,
                                       layerId=paste(markersBySources[[7]]$PLGENAHY), 
                                       popup = paste(sep = "<br/>",paste("<b>","Hydro Generation",markersBySources[[7]]$PLGENAHY,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= hyColor) %>%
                      
                      #Solar  
                      addCircleMarkers(markersBySources[[8]]$LON, markersBySources[[8]]$LAT,
                                       layerId=paste(markersBySources[[8]]$PLGENASO), 
                                       popup = paste(sep = "<br/>",paste("<b>","Solar Generation",markersBySources[[8]]$PLGENASO,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= soColor) %>%
                      
                      #Biomass
@@ -634,7 +678,8 @@ server <- function(input, output,session) {
                      addCircleMarkers(markersBySources[[10]]$LON, markersBySources[[10]]$LAT,
                                       layerId=paste(markersBySources[[10]]$PLGENAGT), 
                                       popup = paste(sep = "<br/>",paste("<b>","GeoThermal Generation",markersBySources[[10]]$PLGENAGT,"</b>")), 
-                                      fillOpacity = opacity, clusterOptions = markerClusterOptions(),
+                                      fillOpacity = opacity, 
+                                      clusterOptions = markerClusterOptions(),
                                       color= gtColor) %>%
                       
                       
@@ -644,35 +689,35 @@ server <- function(input, output,session) {
 
   }) #end observer
   
-  coalreactive<-reactive(
-
-    if('Coal' %in% input$mapILsource)
-     {
-    #   
-      leafletProxy("map1") %>% clearMarkers() %>%
-        #Coal markers 
-        addCircleMarkers(markersBySources[[1]]$LON, markersBySources[[1]]$LAT,
-                         layerId=paste(markersBySources[[1]]$PLGENACL), 
-                         popup = paste(sep = "<br/>",paste("<b>","Coal Generation",markersBySources[[1]]$PLGENACL,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= coColor)
-  }
-  )#end of observe Event
-  
-  observe ({
-    if('Oil' %in% input$mapILsource)
-    {
-      
-      leafletProxy("map1") %>% clearMarkers() %>%
-        #Oil markers
-        addCircleMarkers(markersBySources[[2]]$LON, markersBySources[[2]]$LAT,
-                         layerId=paste(markersBySources[[2]]$PLGENAOL), 
-                         popup = paste(sep = "<br/>",paste("<b>","Oil Generation=",markersBySources[[2]]$PLGENAOL,"</b>")), 
-                         fillOpacity = opacity, 
-                         color= oilColor)
-      
-    }
-  })
+  # coalreactive<-reactive(
+  # 
+  #   if('Coal' %in% input$mapILsource)
+  #    {
+  #   #   
+  #     leafletProxy("map1") %>% clearMarkers() %>%
+  #       #Coal markers 
+  #       addCircleMarkers(markersBySources[[1]]$LON, markersBySources[[1]]$LAT,
+  #                        layerId=paste(markersBySources[[1]]$PLGENACL), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Coal Generation",markersBySources[[1]]$PLGENACL,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= coColor)
+  # }
+  # )#end of observe Event
+  # 
+  # observe ({
+  #   if('Oil' %in% input$mapILsource)
+  #   {
+  #     
+  #     leafletProxy("map1") %>% clearMarkers() %>%
+  #       #Oil markers
+  #       addCircleMarkers(markersBySources[[2]]$LON, markersBySources[[2]]$LAT,
+  #                        layerId=paste(markersBySources[[2]]$PLGENAOL), 
+  #                        popup = paste(sep = "<br/>",paste("<b>","Oil Generation=",markersBySources[[2]]$PLGENAOL,"</b>")), 
+  #                        fillOpacity = opacity, 
+  #                        color= oilColor)
+  #     
+  #   }
+  # })
     # 
     # if('Gas' %in% input$source1)
     # {
@@ -942,7 +987,8 @@ server <- function(input, output,session) {
       
     )
   })
-
+    
+    #-------------
     #TAB 2 OUTPUTS
     #-------------
   
@@ -1023,40 +1069,40 @@ server <- function(input, output,session) {
         baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
        # overlayGroups = c("sources"),
         options = layersControlOptions(collapsed = TRUE)) %>%
-     # addLegend(position = "bottomright", pal=pal, values=sources, 
-      #          title = "Energy Sources") %>%
+            addLegend(position = "bottomright",pal=pal, values=sources,
+                title = "Energy Sources")%>%
       #addMarkers
       addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
                        # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
                        radius =~sqrt(map2dataset()$PLNGENAN/100000),
                        #layerId=paste(PLNGENAN), 
                        popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
-                                     #"<br>Total Generation",PLNGENAN,
-                                     # "<br>Percent Renewable:",PLTRPR,
-                                     "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
+                                                                        "<br>Total Generation",map2dataset()$PLNGENAN,
+                                                                        "<br>Percent Renewable:",map2dataset()$PLTRPR,
+                                                                        "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"),
                        #stroke=FALSE,
                        fillOpacity = 0.5,       
-                        clusterOptions=markerClusterOptions())%>%
+                        clusterOptions=markerClusterOptions(maxClusterRadius = 50))%>%
       clearBounds()
      
   })
   
-  observe({
-    leafletProxy("map2", data=map2dataset()) %>%
-      clearShapes()%>%
-      #addMarkers
-      addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
-                       # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
-                       radius =~sqrt(map2dataset()$PLNGENAN/100000),
-                       #layerId=paste(PLNGENAN), 
-                       popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
-                                     #"<br>Total Generation",PLNGENAN,
-                                     # "<br>Percent Renewable:",PLTRPR,
-                                     "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
-                       #stroke=FALSE,
-                       fillOpacity = 0.5)       
-    # clusterOptions=markerClusterOptions()) 
-  }) #end of observe
+  # observe({
+  #   leafletProxy("map2", data=map2dataset()) %>%
+  #     clearShapes()%>%
+  #     #addMarkers
+  #     addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT), color=~pal(sources),
+  #                      # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
+  #                      radius =~sqrt(map2dataset()$PLNGENAN/100000),
+  #                      #layerId=paste(PLNGENAN), 
+  #                      popup = paste("<b>","Plant Name:", map2dataset()$PNAME,
+  #                                    "<br>Total Generation",map2dataset()$PLNGENAN,
+  #                                    "<br>Percent Renewable:",map2dataset()$PLTRPR,
+  #                                    "<br>Percent Non-renewable:",map2dataset()$PLTNPR,"</b>"), 
+  #                      #stroke=FALSE,
+  #                      fillOpacity = 0.5)       
+  #   # clusterOptions=markerClusterOptions()) 
+  # }) #end of observe
   
   #comparison Map2
   output$map3 <- renderLeaflet({
@@ -1087,7 +1133,7 @@ server <- function(input, output,session) {
                                      "<br>Percent Non-renewable:",map3dataset()$PLTNPR,"</b>"), 
                        #stroke=FALSE,
                        fillOpacity = 0.5,       
-                       clusterOptions=markerClusterOptions()) %>%
+                       clusterOptions=markerClusterOptions(maxClusterRadius = 50)) %>%
     clearBounds()
     
   })
@@ -1122,25 +1168,43 @@ server <- function(input, output,session) {
     )
   })
   
-  #set up reactives for ALL US
   
-  #map1 reactive is dependent upon input$map2source & input$year1 &input$state1
+  #======================================
+  #TAB 3: US DATA
+  #======================================
+  
+  
+  #set up reactive for ALL US
+  
+  #slider reactives
   mapUSdata<- reactive({
     #first filter dataset by Year
     if(input$yearUS==2000)
     {
+      # adata<-d2
+      # adata<-subset(adata,adata$PLNGENAN <=input$range1)
+      # 
+      # bdata<-d2
+      # bdata<-subset(bdata,bdata$PLNGENAN %in% c(16000:(input$range2*1000)))
+      # 
+      # tdata<-rbind(adata,bdata)
       tdata<-d2
-     
+      tdata<-subset(tdata,tdata$PLNGENAN <=input$range1)
+      
+      
     }
-    else if(input$year1==2010)
+    else if(input$yearUS==2010)
     {
       tdata<-d3
-      #tdata<-subset(allUS,allUS$YEAR==input$yearUS)
+      tdata<-subset(tdata,tdata$PLNGENAN <=input$range1)
+      
+      
     }
     else 
     {
       tdata<-d1
-      #tdata<-subset(tdata,tdata$YEAR==2018)
+      tdata<-subset(tdata,tdata$PLNGENAN <=input$range1)
+      
       
     }
     #then subset dataset according to the State
@@ -1177,11 +1241,89 @@ server <- function(input, output,session) {
                                      "<br>Percent Non-renewable:",mapUSdata()$PLTNPR,"</b>"), 
                        #stroke=FALSE,
                        fillOpacity = 0.5,
-                       clusterOptions=markerClusterOptions()
-                       ) 
+                       clusterOptions=markerClusterOptions(maxClusterRadius = 50)
+                       ) %>%
+      
+      
+      addLegend(position = "bottomright",pal=pal, values=sources,
+                title = "Energy Sources")
       
   })
   
+  #US MAP for comparisons
+  #use radio buttons to see how plants have been added to idled between the years
+  #First comparison: Plants added in 2010 (compared to 2000)
+  #second comparison: Plants idled in 2010(compared to 2000)
+  #third comparison : Plants added in 2018(comapared to 2010)
+  #fourth compairson: Plants idled in 2018 compared to 2010)
+  
+  
+  mapUSdata2<- reactive({
+    #first filter data set by Year
+    if(input$UScompare=="r1")
+    {
+      tdata<-d3
+      tdata<-d3[!(d3$ORISPL %in% d2$ORISPL),]
+      # tdata
+     #plants added in 2010 compared to 2000
+    }
+    else if(input$UScompare=="r2")
+    {
+      tdata<-d2
+      tdata<-d2[!(d2$ORISPL %in% d3$ORISPL),]
+     #plants idled in 2010 compared to 2000
+    }
+    else if(input$UScompare=="r3")
+    {
+      tdata<-d1
+      tdata<-d1[!(d1$ORISPL %in% d3$ORISPL),]
+    
+      #tdata<-subset(tdata,tdata$YEAR==2018)
+      
+    }
+    else 
+    {
+      tdata<-d3
+      tdata<-d3[!(d3$ORISPL %in% d1$ORISPL),]
+      
+    }
+
+    tdata
+  })
+  
+  
+  output$mapUS2 <- renderLeaflet({
+    
+   
+    
+    leaflet(data=mapUSdata2(),width = "50%") %>%
+      addTiles() %>%  # Add default OpenStreetMap map tiles
+      # addMarkers(lng=-87.623, lat=41.881, popup="The birthplace of R") %>%
+      setView(lng=-87.623, lat=41.881,zoom=3) %>%
+      addResetMapButton()%>%
+      addProviderTiles(providers$OpenTopoMap, group = "Topo") %>%
+      addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") %>%
+      # Layers control
+      addLayersControl(
+        baseGroups = c("OSM (default)", "Topo", "Toner Lite"),
+        options = layersControlOptions(collapsed = FALSE)) %>%
+  
+      addCircleMarkers(lng=~as.numeric(LON), lat=~as.numeric(LAT),
+                       # addCircles(lng=~as.numeric(LON), lat=~as.numeric(LAT), radius = ~sqrt(t1$PLNGENAN),
+                       #radius =~ifelse((mapUSdata2()$PLNGENAN< mean(mapUSdata()$PLNGENAN)),2,6),
+                       popup = paste("<b>","Plant Name:", mapUSdata2()$PNAME,
+                                     "<br>Plant ID",mapUSdata2()$ORISPL),
+                       stroke=FALSE,
+                       fillOpacity = 0.5,
+                       radius=2.5)
+                     #  clusterOptions=markerClusterOptions(maxClusterRadius = 20))
+      # ) %>%
+      # 
+      # 
+      # addLegend(position = "bottomright",pal=pal, values=sources,
+      #           title = "Energy Sources")
+    
+  })
   
   # observe({
   #     
